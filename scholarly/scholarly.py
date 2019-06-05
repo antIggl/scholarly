@@ -48,7 +48,6 @@ def _handle_captcha(url):
     # Upload to remote host and display to user for human verification
     img_upload = requests.post('http://postimage.org/',
         files={'upload[]': ('scholarly_captcha.jpg', captcha.text)})
-    print(img_upload.text)
     img_url_soup = BeautifulSoup(img_upload.text, 'html.parser')
     img_url = img_url_soup.find_all(alt='scholarly_captcha')[0].get('src')
     print('CAPTCHA image URL: {0}'.format(img_url))
@@ -223,16 +222,16 @@ class Author(object):
         else:
             self.id = re.findall(_CITATIONAUTHRE, __data('a')[0]['href'])[0]
             self.url_picture = _HOST+'/citations?view_op=medium_photo&user={}'.format(self.id)
-            self.name = __data.find('h3', class_='gsc_oai_name').text
-            affiliation = __data.find('div', class_='gsc_oai_aff')
+            self.name = __data.find('h3', class_='gs_ai_name').text
+            affiliation = __data.find('div', class_='gs_ai_aff')
             if affiliation:
                 self.affiliation = affiliation.text
-            email = __data.find('div', class_='gsc_oai_eml')
+            email = __data.find('div', class_='gs_ai_eml')
             if email:
                 self.email = re.sub(_EMAILAUTHORRE, r'@', email.text)
             self.interests = [i.text.strip() for i in
-                              __data.find_all('a', class_='gsc_oai_one_int')]
-            citedby = __data.find('div', class_='gsc_oai_cby')
+                              __data.find_all('a', class_='gs_ai_one_int')]
+            citedby = __data.find('div', class_='gs_ai_cby')
             if citedby and citedby.text != '':
                 self.citedby = int(citedby.text[9:])
         self._filled = False
@@ -242,12 +241,12 @@ class Author(object):
         url_citations = _CITATIONAUTH.format(self.id)
         url = '{0}&pagesize={1}'.format(url_citations, _PAGESIZE)
         soup = _get_soup(_HOST+url)
-        self.name = soup.find('div', id='gsc_prf_in').text
-        self.affiliation = soup.find('div', class_='gsc_prf_il').text
-        self.interests = [i.text.strip() for i in soup.find_all('a', class_='gsc_prf_inta')]
+        self.name = soup.find('div', id='gs_prf_in').text
+        self.affiliation = soup.find('div', class_='gs_prf_il').text
+        self.interests = [i.text.strip() for i in soup.find_all('a', class_='gs_prf_inta')]
         
         # h-index, i10-index and h-index, i10-index in the last 5 years
-        index = soup.find_all('td', class_='gsc_rsb_std')
+        index = soup.find_all('td', class_='gs_rsb_std')
         if index:
             self.citedby = int(index[0].text)
             self.citedby5y = int(index[1].text)
@@ -259,26 +258,26 @@ class Author(object):
             self.hindex = self.hindex5y = self.i10index = self.i10index5y = 0
 
         # number of citations per year
-        years = [int(y.text) for y in soup.find_all('span', class_='gsc_g_t')]
-        cites = [int(c.text) for c in soup.find_all('span', class_='gsc_g_al')]
+        years = [int(y.text) for y in soup.find_all('span', class_='gs_g_t')]
+        cites = [int(c.text) for c in soup.find_all('span', class_='gs_g_al')]
         self.cites_per_year = dict(zip(years, cites))
 
         # co-authors
         self.coauthors = []
-        for row in soup.find_all('span', class_='gsc_rsb_a_desc'):
+        for row in soup.find_all('span', class_='gs_rsb_a_desc'):
             new_coauthor = Author(re.findall(_CITATIONAUTHRE, row('a')[0]['href'])[0])
             new_coauthor.name = row.find(tabindex="-1").text
-            new_coauthor.affiliation = row.find(class_="gsc_rsb_a_ext").text
+            new_coauthor.affiliation = row.find(class_="gs_rsb_a_ext").text
             self.coauthors.append(new_coauthor)
 
 
         self.publications = list()
         pubstart = 0
         while True:
-            for row in soup.find_all('tr', class_='gsc_a_tr'):
+            for row in soup.find_all('tr', class_='gs_a_tr'):
                 new_pub = Publication(row, 'citations')
                 self.publications.append(new_pub)
-            if 'disabled' not in soup.find('button', id='gsc_bpf_more').attrs:
+            if 'disabled' not in soup.find('button', id='gs_bpf_more').attrs:
                 pubstart += _PAGESIZE
                 url = '{0}&cstart={1}&pagesize={2}'.format(url_citations, pubstart, _PAGESIZE)
                 soup = _get_soup(_HOST+url)
